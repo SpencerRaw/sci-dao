@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scidao"
+version = "0.1.0"
+description = "AI Scientist × Human Lab Network — an AI with scientific curiosity that distributes experiments to humans with immutable contribution tracking."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "SciDAO Contributors"}
+]
+keywords = ["ai", "science", "decentralized-science", "hypothesis-generation", "scientific-research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+scidao = "scidao.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/SpencerRaw/sci-dao"
+Repository = "https://github.com/SpencerRaw/sci-dao"
+Issues = "https://github.com/SpencerRaw/sci-dao/issues"
+
+[tool.setuptools.packages.find]
+include = ["scidao*"]

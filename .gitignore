@@ -21,7 +21,7 @@ __pycache__/
 venv/
 
 # SciDAO runtime data (generated locally)
-ledger/
+ledger_data/
 output/
 
 # Agent internals

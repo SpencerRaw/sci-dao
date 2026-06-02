@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-SciDAO v0 — AI with scientific curiosity that hires humans.
+SciDAO CLI — AI with scientific curiosity that hires humans.
 
-CLI: python scidao.py explore "carbon dots for cancer therapy"
+Commands: explore, full, register, submit, leaderboard, lineage
 """
 
 import json
 import os
 
-from curiosity import generate_hypotheses, explore_domain
-from decomposer import decompose_hypothesis, estimate_effort
-from ledger import ContributionLedger
+from scidao.curiosity import generate_hypotheses, explore_domain
+from scidao.decomposer import decompose_hypothesis, estimate_effort
+from scidao.ledger import ContributionLedger
 
 
 SPEED_BANNER = """
@@ -72,7 +72,7 @@ def cmd_submit(contributor_id: str, task_id: str, hypothesis_id: str,
     
     if contributor_id not in ledger.contributors:
         print(f"❌ Unknown contributor: {contributor_id}")
-        print("   Register first: python scidao.py register <name>")
+        print("   Register first: scidao register <name>")
         return
     
     entry_id = ledger.record(
@@ -153,10 +153,10 @@ def cmd_full_run(domain: str, constraints: str = ""):
     print("🤝 HOW TO CONTRIBUTE")
     print("─" * 60)
     print("""
-  1. Register:  python scidao.py register "Your Name" --skills "cell culture,MTT"
+  1. Register:  scidao register "Your Name" --skills "cell culture,MTT"
   2. Claim task: Pick any OPEN task above
   3. Run experiment following the steps
-  4. Submit:     python scidao.py submit <your-id> <task-id> <hypo-id> "your results"
+  4. Submit:     scidao submit <your-id> <task-id> <hypo-id> "your results"
   5. Get credit: Your contribution is permanently recorded in the ledger
   
   The AI will learn from your results and generate better hypotheses.
@@ -182,10 +182,14 @@ def cmd_full_run(domain: str, constraints: str = ""):
     print(f"📁 Saved to {outpath}")
 
 
-if __name__ == "__main__":
+def main():
+    """CLI entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="SciDAO — AI Scientist with Human Lab Network")
+    parser = argparse.ArgumentParser(
+        description="SciDAO — AI Scientist with Human Lab Network",
+        prog="scidao"
+    )
     sub = parser.add_subparsers(dest="command")
     
     # explore
@@ -234,3 +238,7 @@ if __name__ == "__main__":
         cmd_lineage(args.hypothesis_id)
     else:
         parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SciDAO Demo — AI Scientist × Human Lab Network</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #141420;
+  --surface2: #1c1c2e;
+  --border: #2a2a3e;
+  --text: #e0e0f0;
+  --text2: #8888aa;
+  --accent: #7c5cfc;
+  --accent2: #5ce0d4;
+  --green: #4ade80;
+  --yellow: #facc15;
+  --red: #f87171;
+  --mono: 'SF Mono', 'Fira Code', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+
+/* Header */
+.hero {
+  text-align: center;
+  padding: 48px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.hero h1 {
+  font-size: 2.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.hero .tagline {
+  color: var(--text2);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+
+/* Status bar */
+.status-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.stat {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.9rem; color: var(--text2);
+}
+.stat strong { color: var(--text); font-size: 1.1rem; }
+
+/* Section */
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .icon { font-size: 1.4rem; }
+
+/* Hypothesis cards */
+.hypo-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.hypo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+.hypo-card:hover { border-color: var(--accent); }
+.hypo-card .hypo-id {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.hypo-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.hypo-card .hypo-text {
+  font-size: 0.9rem;
+  color: var(--text2);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.hypo-card .hypo-meta {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.badge {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.badge-high { background: #14532d; color: var(--green); }
+.badge-medium { background: #3b2f0a; color: var(--yellow); }
+.badge-low { background: #3b0a0a; color: var(--red); }
+
+/* Task table */
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 32px;
+  font-size: 0.88rem;
+}
+.task-table th {
+  text-align: left;
+  padding: 10px 12px;
+  color: var(--text2);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.task-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.task-table tr:hover td { background: var(--surface2); }
+.task-status { display: flex; align-items: center; gap: 6px; }
+.task-diff { font-size: 0.75rem; }
+
+/* CTA section */
+.cta {
+  background: linear-gradient(135deg, var(--surface), var(--surface2));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.cta h3 { margin-bottom: 12px; }
+.cta code {
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent2);
+}
+.cta ol { padding-left: 20px; color: var(--text2); }
+.cta ol li { margin-bottom: 6px; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text2);
+  font-size: 0.82rem;
+}
+.footer a { color: var(--accent); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+/* Loading state */
+.loading {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text2);
+}
+.loading-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <h1>🧬 SciDAO</h1>
+    <p class="tagline">"The AI has curiosity. You have hands."</p>
+  </div>
+
+  <!-- Data will be injected here -->
+  <div id="app">
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <p>Loading pipeline results…</p>
+      <p style="font-size:0.8rem;margin-top:8px">If this persists, run: <code>scidao full "your domain"</code></p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>
+      <a href="https://github.com/SpencerRaw/sci-dao" target="_blank">GitHub</a> &nbsp;·&nbsp;
+      MIT License &nbsp;·&nbsp;
+      SciDAO v0.1.0
+    </p>
+    <p style="margin-top:8px">Nature is the judge. You are the jury. The AI is the prosecutor.</p>
+  </div>
+
+</div>
+
+<script>
+// Try to load the pipeline output
+async function loadData() {
+  try {
+    const resp = await fetch('output/marketplace.json');
+    if (!resp.ok) throw new Error('No data yet');
+    const data = await resp.json();
+    render(data);
+  } catch {
+    // No data yet — show placeholder with instructions
+    document.getElementById('app').innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>Waiting for pipeline to complete…</p>
+        <p style="font-size:0.8rem;margin-top:8px;color:var(--text2)">
+          Run: <code style="color:var(--accent2)">scidao full "carbon dots for cancer therapy"</code>
+        </p>
+      </div>
+    `;
+    // Retry in 5 seconds
+    setTimeout(loadData, 5000);
+  }
+}
+
+function render(data) {
+  const { domain, hypotheses, tasks, stats } = data;
+  const difficultyIcon = { BEGINNER: '🟢', INTERMEDIATE: '🟡', EXPERT: '🔴' };
+  const statusIcon = { OPEN: '🟢', CLAIMED: '🟡', COMPLETED: '🔵', VERIFIED: '✅' };
+
+  document.getElementById('app').innerHTML = `
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      <div class="stat">🔬 <strong>${escapeHtml(domain)}</strong></div>
+      <div class="stat">📋 <strong>${stats.total_hypotheses}</strong> hypotheses</div>
+      <div class="stat">🔧 <strong>${stats.total_tasks}</strong> tasks</div>
+      <div class="stat">🟢 <strong>${stats.open_tasks}</strong> open</div>
+    </div>
+
+    <!-- Hypotheses -->
+    <div class="section-title">
+      <span class="icon">🧠</span> AI-Generated Hypotheses
+    </div>
+    <div class="hypo-grid">
+      ${hypotheses.map(h => `
+        <div class="hypo-card">
+          <div class="hypo-id">${escapeHtml(h.id)}</div>
+          <h3>${escapeHtml(h.title)}</h3>
+          <p class="hypo-text">${escapeHtml((h.text || '').slice(0, 200))}${(h.text || '').length > 200 ? '…' : ''}</p>
+          <div class="hypo-meta">
+            <span class="badge badge-${(h.testability || 'LOW').toLowerCase()}">${escapeHtml(h.testability || '?')} testability</span>
+            ${h.rationale ? `<span style="font-size:0.8rem;color:var(--text2)">${escapeHtml(h.rationale.slice(0, 80))}…</span>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Task Marketplace -->
+    <div class="section-title">
+      <span class="icon">📊</span> Task Marketplace
+    </div>
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Task</th>
+          <th>Hypothesis</th>
+          <th>Difficulty</th>
+          <th>Est. Time</th>
+          <th>Steps</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tasks.map(t => `
+          <tr>
+            <td><span class="task-status">${statusIcon[t.status] || '⚪'} ${t.status}</span></td>
+            <td><strong>${escapeHtml(t.title || '?')}</strong></td>
+            <td style="font-family:var(--mono);font-size:0.78rem;color:var(--accent)">${escapeHtml(t.parent_hypothesis || '?')}</td>
+            <td><span class="task-diff">${difficultyIcon[t.difficulty] || ''} ${t.difficulty || '?'}</span></td>
+            <td>${t.time_estimate || '?'}h</td>
+            <td>${(t.steps || []).length}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <!-- How to Contribute -->
+    <div class="cta">
+      <h3>🤝 How to Contribute</h3>
+      <ol>
+        <li>Register: <code>scidao register "Your Name" --skills "cell culture,MTT"</code></li>
+        <li>Pick any <span style="color:var(--green)">OPEN</span> task above</li>
+        <li>Run the experiment following the numbered steps</li>
+        <li>Submit: <code>scidao submit &lt;your-id&gt; &lt;task-id&gt; &lt;hypo-id&gt; "your results"</code></li>
+        <li>Your contribution is <strong>permanently recorded</strong> in the immutable ledger</li>
+      </ol>
+      <p style="margin-top:12px;font-size:0.85rem;color:var(--text2)">
+        The AI learns from your results and generates better hypotheses in the next round.
+      </p>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+loadData();
+</script>
+</body>
+</html>

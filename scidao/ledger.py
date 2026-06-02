@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 
-LEDGER_DIR = Path(__file__).parent / "ledger"
+LEDGER_DIR = Path("ledger_data")  # relative to cwd, overridable in __init__
 
 
 class ContributionLedger:
