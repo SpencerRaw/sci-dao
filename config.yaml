@@ -1,0 +1,58 @@
+# Configuration file for proposal-gen-v1.py
+
+# OpenAI API Key (REQUIRED)
+# Obtain an API key from OpenRouter (https://openrouter.ai) and set it as an environment variable:
+#   export OPENROUTER_API_KEY=your_api_key
+# Or, you can paste your key directly below (not recommended for production):
+#openai_api_key: ""
+
+# ── API Provider ──
+# Set DEEPSEEK_API_KEY env var for DeepSeek, or OPENROUTER_API_KEY for OpenRouter.
+# DeepSeek: https://platform.deepseek.com/api_keys
+# OpenRouter: https://openrouter.ai/keys
+
+# DeepSeek API Base URL
+deepseek_base_url: "https://api.deepseek.com/v1"
+
+# OpenRouter API Base URL
+openrouter_base_url: "https://openrouter.ai/api/v1"
+
+# LLM Model (DeepSeek V4 Pro recommended)
+# DeepSeek: deepseek-v4-pro, deepseek-chat (V3), deepseek-reasoner (R1)
+# OpenRouter: google/gemini-2.0-flash-exp:free, etc.
+llm_model: "deepseek-v4-pro"
+
+# Number of hypotheses to generate
+num_hypotheses: 6
+
+# Elo K-factor
+elo_k_factor: 32
+
+# Top K hypotheses for evolution
+top_k_hypotheses: 2
+
+# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+logging_level: "INFO"
+
+# Base log file name (without extension)
+log_file_name: "app"
+
+# FastAPI host
+fastapi_host: "0.0.0.0"
+
+# FastAPI port
+fastapi_port: 8000
+
+# Temperature settings for each step
+step_temperatures:
+  generation: 0.7
+  reflection: 0.5
+
+# Per-agent model overrides (optional — leave empty to use default llm_model)
+# Useful for: cheap model for simple tasks, powerful model for complex reasoning
+agent_models:
+  generation: ""       # e.g., "google/gemini-2.0-flash-exp:free"
+  reflection: ""       # e.g., "anthropic/claude-3-haiku:free"
+  ranking: ""          # Debates benefit from strong reasoning
+  evolution: ""        # Evolution benefits from creative models
+  meta_review: ""      # Synthesis benefits from strong models

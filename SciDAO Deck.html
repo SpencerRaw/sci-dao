@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SciDAO — AI Scientist × Human Lab Network</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a28;
+  --border: #252538;
+  --text: #e8e8f0;
+  --text2: #9898b0;
+  --accent: #6c5ce7;
+  --accent2: #00d4aa;
+  --accent3: #ff6b9d;
+  --gold: #ffc048;
+  --red: #ff4757;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#deck {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  transform-origin: top left;
+}
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  padding: 80px 100px;
+  flex-direction: column;
+}
+.slide.active { display: flex; }
+
+/* Navigation */
+#nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 100; }
+#nav button { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-family: var(--font); font-size: 13px; }
+#nav button:hover { background: var(--border); color: var(--text); }
+#nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#page-indicator { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); color: var(--text2); font-size: 12px; font-family: var(--mono); z-index: 100; }
+
+/* Typography */
+h1 { font-size: 72px; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+h2 { font-size: 48px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 24px; }
+h3 { font-size: 28px; font-weight: 600; margin-bottom: 12px; }
+.gradient-text { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.subtitle { font-size: 24px; color: var(--text2); max-width: 700px; line-height: 1.5; }
+.mono { font-family: var(--mono); font-size: 14px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text2); margin-bottom: 8px; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+.card-grid { display: grid; gap: 20px; }
+.card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+/* Tags */
+.tag { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.tag-green { background: rgba(0,212,170,0.15); color: var(--accent2); }
+.tag-purple { background: rgba(108,92,231,0.15); color: var(--accent); }
+.tag-pink { background: rgba(255,107,157,0.15); color: var(--accent3); }
+.tag-gold { background: rgba(255,192,72,0.15); color: var(--gold); }
+
+/* Architecture diagram */
+.arch-row { display: flex; gap: 24px; align-items: center; margin: 16px 0; }
+.arch-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; flex: 1; text-align: center; }
+.arch-box h3 { font-size: 20px; margin-bottom: 8px; }
+.arch-box p { font-size: 14px; color: var(--text2); }
+.arch-arrow { font-size: 32px; color: var(--accent); flex-shrink: 0; }
+
+/* Hypothesis list */
+.hypo-row { display: flex; gap: 16px; align-items: flex-start; padding: 20px 0; border-bottom: 1px solid var(--border); }
+.hypo-row:last-child { border-bottom: none; }
+.hypo-id { font-family: var(--mono); color: var(--accent); font-size: 13px; min-width: 80px; }
+.hypo-title { font-size: 17px; font-weight: 600; flex: 1; }
+.hypo-meta { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Task grid */
+.task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.task-card .task-id { font-family: var(--mono); font-size: 11px; color: var(--accent2); margin-bottom: 4px; }
+.task-card .task-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.task-card .task-meta { font-size: 12px; color: var(--text2); }
+
+/* Flywheel */
+.flywheel { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.fw-step { background: var(--surface2); border: 2px solid var(--border); border-radius: 50%; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 16px; font-weight: 600; padding: 20px; }
+.fw-arrow { font-size: 36px; color: var(--accent); }
+
+/* Metrics */
+.metric { text-align: center; }
+.metric .number { font-size: 64px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.metric .desc { font-size: 16px; color: var(--text2); margin-top: 8px; }
+
+/* Footer */
+.footer { position: absolute; bottom: 40px; left: 100px; right: 100px; display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); }
+
+/* Code block */
+.code-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; font-family: var(--mono); font-size: 14px; line-height: 1.8; color: var(--text); }
+.code-block .comment { color: #6a6a80; }
+.code-block .cmd { color: var(--accent2); }
+.code-block .arg { color: var(--accent3); }
+.code-block .val { color: var(--gold); }
+
+/* CTA section */
+.cta-box { background: linear-gradient(135deg, rgba(108,92,231,0.1), rgba(0,212,170,0.1)); border: 1px solid var(--accent); border-radius: 20px; padding: 48px; text-align: center; margin-top: auto; }
+.cta-box h2 { margin-bottom: 16px; }
+.cta-box p { color: var(--text2); font-size: 18px; max-width: 600px; margin: 0 auto 24px; }
+.btn { display: inline-block; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 16px; text-decoration: none; cursor: pointer; border: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-outline { border: 2px solid var(--border); color: var(--text); background: transparent; margin-left: 12px; }
+</style>
+</head>
+<body>
+<div id="deck">
+
+<!-- Slide 1: Title -->
+<div class="slide active" data-slide="0">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+    <div class="label">Scientific DAO · v0</div>
+    <h1 style="max-width:900px">An AI with <span class="gradient-text">scientific curiosity</span><br>that hires humans to do experiments</h1>
+    <p class="subtitle" style="margin-top:24px">AI generates hypotheses → atomizes into tasks → anyone executes → AI learns. Credit is permanent and non-negotiable.</p>
+    <div style="display:flex;gap:12px;margin-top:32px">
+      <span class="tag tag-purple">AI Scientist</span>
+      <span class="tag tag-green">Human Lab Network</span>
+      <span class="tag tag-pink">Immutable Credit</span>
+      <span class="tag tag-gold">Self-Improving</span>
+    </div>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 1 / 9</span></div>
+</div>
+
+<!-- Slide 2: The Problem -->
+<div class="slide" data-slide="1">
+  <h2>The <span class="gradient-text">Bottleneck</span></h2>
+  <div class="card-grid cols-2" style="margin-top:32px">
+    <div class="card">
+      <div style="font-size:48px;margin-bottom:16px">🧠</div>
+      <h3>Hypothesis Generation</h3>
+      <p style="color:var(--text2);line-height:1.6">Google's Co-Scientist (Nature 2026) proved AI can generate testable, novel hypotheses at scale. We reproduced 88% fidelity independently.</p>
+      <div style="margin-top:16px;font-family:var(--mono);color:var(--accent2);font-size:14px">~seconds per hypothesis</div>
+    </div>
+    <div class="card">
+      <div style="font-size:48px;margin-bottom:16px">🧪</div>
+      <h3>Physical Validation</h3>
+      <p style="color:var(--text2);line-height:1.6">A hypothesis is just a thought until someone runs the experiment. Labs are slow, expensive, and geographically constrained.</p>
+      <div style="margin-top:16px;font-family:var(--mono);color:var(--accent3);font-size:14px">~weeks per experiment</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:48px;font-size:24px;color:var(--text2)">
+    The <span style="color:var(--accent);font-weight:700">gap</span> between thinking and doing is the single biggest bottleneck in science.
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 2 / 9</span></div>
+</div>
+
+<!-- Slide 3: Architecture -->
+<div class="slide" data-slide="2">
+  <h2>SciDAO <span class="gradient-text">Architecture</span></h2>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="arch-row">
+      <div class="arch-box" style="border-color:var(--accent)">
+        <div class="label" style="color:var(--accent)">Layer 1</div>
+        <h3>🧬 Curiosity Engine</h3>
+        <p>AI explores domains, generates hypotheses, designs experiments. 3-strategy generation: literature-grounded, scientific debate, iterative assumptions.</p>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box" style="border-color:var(--accent2)">
+        <div class="label" style="color:var(--accent2)">Layer 2</div>
+        <h3>🔧 Task Marketplace</h3>
+        <p>Hypotheses atomized into executable units. Each task: materials, steps, time estimate, difficulty. Anyone can claim and execute.</p>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box" style="border-color:var(--accent3)">
+        <div class="label" style="color:var(--accent3)">Layer 3</div>
+        <h3>📜 Contribution Graph</h3>
+        <p>Every data point traced to its human contributor. SHA-256 content hashing. Immutable. Granular to 0.1% contribution weight.</p>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <span class="arch-arrow">↻</span>
+      <span style="color:var(--text2);margin-left:8px">Results feed back → AI learns → better hypotheses</span>
+    </div>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 3 / 9</span></div>
+</div>
+
+<!-- Slide 4: Real Demo — NIR Carbon Dots -->
+<div class="slide" data-slide="3">
+  <h2>Live Demo: <span class="gradient-text">NIR Carbon Dots × Arabidopsis</span></h2>
+  <p class="subtitle" style="margin-bottom:24px">SciDAO Curiosity Engine ran on May 30, 2026. Domain: carbon dots with NIR emission for enhancing photosynthesis under low-light.</p>
+  <div style="flex:1;overflow-y:auto">
+    <div class="hypo-row">
+      <div class="hypo-id">HYP-001</div>
+      <div class="hypo-title">NIR-to-red upconverting carbon dots provide supplementary PAR to Arabidopsis under low-light, increasing biomass without phototoxicity</div>
+      <div class="hypo-meta"><span class="tag tag-green">HIGH testability</span></div>
+    </div>
+    <div class="hypo-row">
+      <div class="hypo-id">HYP-002</div>
+      <div class="hypo-title">NIR-emitting carbon dots act as PSI‑specific antennae that boost cyclic electron flow under low light without exciting PSII</div>
+      <div class="hypo-meta"><span class="tag tag-green">HIGH testability</span></div>
+    </div>
+    <div class="hypo-row">
+      <div class="hypo-id">HYP-003</div>
+      <div class="hypo-title">Far‑red/NIR‑emitting carbon dots exploit phytochrome‑mediated shade‑acclimation to indirectly enhance whole‑plant photosynthesis</div>
+      <div class="hypo-meta"><span class="tag tag-gold">MEDIUM testability</span></div>
+    </div>
+    <div class="hypo-row">
+      <div class="hypo-id">HYP-004</div>
+      <div class="hypo-title">Carbon dots with triplet–triplet annihilation upconversion harvest ambient NIR for supplementary PAR under canopy shade</div>
+      <div class="hypo-meta"><span class="tag tag-green">HIGH testability</span></div>
+    </div>
+    <div class="hypo-row">
+      <div class="hypo-id">HYP-005</div>
+      <div class="hypo-title">Green‑to‑far‑red photoluminescent carbon dots balance photosystem excitation and reduce non‑photochemical quenching</div>
+      <div class="hypo-meta"><span class="tag tag-green">HIGH testability</span></div>
+    </div>
+  </div>
+  <div style="margin-top:16px;display:flex;gap:16px;font-family:var(--mono);font-size:13px;color:var(--text2)">
+    <span>DeepSeek V4 Pro</span><span>3 strategies</span><span>~3 min generation</span><span>5 unique hypotheses</span>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 4 / 9</span></div>
+</div>
+
+<!-- Slide 5: Task Marketplace Example -->
+<div class="slide" data-slide="4">
+  <h2>Hypothesis → <span class="gradient-text">Atomized Tasks</span></h2>
+  <p class="subtitle" style="margin-bottom:24px">HYP-001 decomposed into 5 executable tasks. Each one small enough for a single person with standard equipment.</p>
+  <div class="card-grid cols-2">
+    <div class="task-card">
+      <div class="task-id">TASK-HYP-001-01</div>
+      <div class="task-title">Synthesis and optical characterization of NIR-to-red upconverting carbon dots</div>
+      <div class="task-meta" style="margin-top:8px">
+        <span class="tag tag-purple">INTERMEDIATE</span> &nbsp; ~10h &nbsp; • &nbsp; Hydrothermal synthesis, TEM, fluorescence spectroscopy
+      </div>
+    </div>
+    <div class="task-card">
+      <div class="task-id">TASK-HYP-001-02</div>
+      <div class="task-title">Foliar application of carbon dots to Arabidopsis and confocal imaging of leaf uptake</div>
+      <div class="task-meta" style="margin-top:8px">
+        <span class="tag tag-purple">INTERMEDIATE</span> &nbsp; ~8h &nbsp; • &nbsp; Spray application, confocal microscopy
+      </div>
+    </div>
+    <div class="task-card">
+      <div class="task-id">TASK-HYP-001-03</div>
+      <div class="task-title">Low-light growth assay with biomass quantification</div>
+      <div class="task-meta" style="margin-top:8px">
+        <span class="tag tag-green">BEGINNER</span> &nbsp; ~6h &nbsp; • &nbsp; Growth chamber, fresh/dry weight
+      </div>
+    </div>
+    <div class="task-card">
+      <div class="task-id">TASK-HYP-001-04</div>
+      <div class="task-title">Chlorophyll fluorescence measurement (PAM) to assess PSII efficiency</div>
+      <div class="task-meta" style="margin-top:8px">
+        <span class="tag tag-purple">INTERMEDIATE</span> &nbsp; ~4h &nbsp; • &nbsp; PAM fluorometer, Fv/Fm, ΦPSII
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:20px;display:flex;gap:16px;font-family:var(--mono);font-size:13px;color:var(--text2)">
+    <span>5 tasks</span><span>~37h total</span><span>1 BEGINNER</span><span>3 INTERMEDIATE</span><span>1 EXPERT</span>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 5 / 9</span></div>
+</div>
+
+<!-- Slide 6: Contribution Graph -->
+<div class="slide" data-slide="5">
+  <h2>Immutable <span class="gradient-text">Contribution Graph</span></h2>
+  <div class="card-grid cols-2" style="flex:1">
+    <div>
+      <div class="code-block" style="height:100%">
+<span class="comment">// Every contribution is permanently recorded</span>
+<span class="cmd">ledger.record</span>(
+  <span class="arg">contributor</span>: <span class="val">"Alice Chen"</span>,
+  <span class="arg">task</span>:        <span class="val">"TASK-HYP-001-03"</span>,
+  <span class="arg">hypothesis</span>:  <span class="val">"HYP-001"</span>,
+  <span class="arg">content</span>:     <span class="val">"MTT assay: HeLa + 50μg/ml NIR-CD"</span>,
+  <span class="arg">weight</span>:      <span class="val">0.15</span>
+)
+<br>
+<span class="comment">// Verifiable integrity</span>
+<span class="cmd">ledger.verify</span>(<span class="val">"ENT-a3f2b9c1"</span>)
+<span class="comment">// → true: SHA-256 matches stored hash</span>
+<br>
+<span class="comment">// Granular attribution</span>
+<span class="cmd">leaderboard</span>:
+  1. Alice Chen   <span class="val">0.450</span>  (3 tasks)
+  2. Bob Wang     <span class="val">0.300</span>  (2 tasks)
+  3. Carol Li     <span class="val">0.150</span>  (1 task)
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="card">
+        <h3>🔐 Content Hashing</h3>
+        <p style="color:var(--text2)">SHA-256 hash of every submission. Tamper-evident. No blockchain needed — pure cryptographic integrity.</p>
+      </div>
+      <div class="card">
+        <h3>⚖️ Granular Weight</h3>
+        <p style="color:var(--text2)">Contributions weighted 0.0–1.0. A single data point = 0.15. A breakthrough insight = 0.50. PI doesn't monopolize credit.</p>
+      </div>
+      <div class="card">
+        <h3>🔗 Full Lineage</h3>
+        <p style="color:var(--text2)">Every entry links to its parent. Trace any result back through the entire chain of contributions.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 6 / 9</span></div>
+</div>
+
+<!-- Slide 7: Self-Improvement Flywheel -->
+<div class="slide" data-slide="6">
+  <h2>The <span class="gradient-text">Self-Improvement</span> Flywheel</h2>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+    <div class="flywheel">
+      <div class="fw-step" style="border-color:var(--accent)">
+        🧬<br>AI generates<br>hypothesis
+      </div>
+      <div class="fw-arrow">→</div>
+      <div class="fw-step" style="border-color:var(--accent2)">
+        🔧<br>Decomposed<br>into tasks
+      </div>
+      <div class="fw-arrow">→</div>
+      <div class="fw-step" style="border-color:var(--accent3)">
+        👩‍🔬<br>Humans run<br>experiments
+      </div>
+      <div class="fw-arrow">→</div>
+      <div class="fw-step" style="border-color:var(--gold)">
+        📊<br>Results<br>flow back
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:24px">
+    <div style="display:flex;justify-content:center;gap:60px">
+      <div class="metric"><div class="number">Nature</div><div class="desc">The ultimate judge. Every experiment is training data.</div></div>
+      <div class="metric"><div class="number">×100</div><div class="desc">Iterations sharpen scientific intuition. AI develops taste.</div></div>
+      <div class="metric"><div class="number">∞</div><div class="desc">Compounding knowledge. Each cycle feeds the next.</div></div>
+    </div>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 7 / 9</span></div>
+</div>
+
+<!-- Slide 8: Technical Foundation -->
+<div class="slide" data-slide="7">
+  <h2>Built on <span class="gradient-text">Real Infrastructure</span></h2>
+  <div class="card-grid cols-3" style="margin-top:24px">
+    <div class="card">
+      <div style="font-size:36px;margin-bottom:12px">📄</div>
+      <h3>Co-Scientist</h3>
+      <p style="color:var(--text2);line-height:1.6">Multi-strategy hypothesis generation. Elo-ranked tournament. Scientific debate self-play. Built on patterns from Google's AI Co-Scientist.</p>
+      <div style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--accent)">github.com/SpencerRaw/sci-dao</div>
+    </div>
+    <div class="card">
+      <div style="font-size:36px;margin-bottom:12px">🐍</div>
+      <h3>SciDAO Core</h3>
+      <p style="color:var(--text2);line-height:1.6">Curiosity Engine + Task Decomposer + Contribution Ledger. Python. DeepSeek V4 Pro. Standalone CLI. TF-IDF dedup.</p>
+      <div style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--accent)">github.com/SpencerRaw/sci-dao</div>
+    </div>
+    <div class="card">
+      <div style="font-size:36px;margin-bottom:12px">🔬</div>
+      <h3>3 Pilot Clients</h3>
+      <p style="color:var(--text2);line-height:1.6">Real biophysics labs: transcription factor IDR · carbon dot cancer therapy · NIR carbon dots for horticulture.</p>
+      <div style="margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--accent2)">Ready to pilot</div>
+    </div>
+  </div>
+  <div class="code-block" style="margin-top:24px">
+<span class="comment"># One command to run the full pipeline</span>
+<span class="cmd">python scidao.py full</span> <span class="val">"carbon dots NIR emission for Arabidopsis photosynthesis"</span>
+<span class="comment"># → 5 hypotheses → 14 atomized tasks → marketplace → contribution ledger</span>
+  </div>
+  <div class="footer"><span>SciDAO</span><span>Slide 8 / 9</span></div>
+</div>
+
+<!-- Slide 9: Call to Action -->
+<div class="slide" data-slide="8">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <div class="cta-box">
+      <h2>Help Build the <span class="gradient-text">Future of Science</span></h2>
+      <p>We need: researchers with hypotheses to test · lab scientists who can run experiments · engineers who want to build the contribution graph · anyone who believes science should be faster and fairer.</p>
+      <div style="display:flex;justify-content:center;gap:16px">
+        <span class="tag tag-green" style="font-size:14px;padding:8px 20px">Run an experiment</span>
+        <span class="tag tag-purple" style="font-size:14px;padding:8px 20px">Submit a hypothesis</span>
+        <span class="tag tag-pink" style="font-size:14px;padding:8px 20px">Build the infra</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:60px;justify-content:center;margin-top:48px">
+      <div class="metric"><div class="number" style="font-size:48px">~14</div><div class="desc">Tasks generated</div></div>
+      <div class="metric"><div class="number" style="font-size:48px">5</div><div class="desc">Testable hypotheses</div></div>
+      <div class="metric"><div class="number" style="font-size:48px">3</div><div class="desc">Pilot labs ready</div></div>
+      <div class="metric"><div class="number" style="font-size:48px">0</div><div class="desc">Experiments run (yet)</div></div>
+    </div>
+  </div>
+  <div class="footer"><span>SciDAO v0 · May 2026</span><span>Slide 9 / 9</span></div>
+</div>
+
+</div>
+
+<div id="page-indicator">1 / 9</div>
+<div id="nav"></div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+let current = parseInt(localStorage.getItem('scidao-deck-slide')) || 0;
+
+function showSlide(n) {
+  slides.forEach(s => s.classList.remove('active'));
+  slides[n].classList.add('active');
+  document.getElementById('page-indicator').textContent = `${n+1} / ${totalSlides}`;
+  document.querySelectorAll('#nav button').forEach((b,i) => b.classList.toggle('active', i===n));
+  localStorage.setItem('scidao-deck-slide', n);
+  current = n;
+}
+
+// Build nav
+const nav = document.getElementById('nav');
+for (let i=0; i<totalSlides; i++) {
+  const btn = document.createElement('button');
+  btn.textContent = i+1;
+  btn.addEventListener('click', () => showSlide(i));
+  if (i===current) btn.classList.add('active');
+  nav.appendChild(btn);
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault();
+    showSlide(Math.min(current+1, totalSlides-1));
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    showSlide(Math.max(current-1, 0));
+  }
+});
+
+// Scale to fit
+function scaleDeck() {
+  const deck = document.getElementById('deck');
+  const scaleX = window.innerWidth / 1920;
+  const scaleY = window.innerHeight / 1080;
+  const scale = Math.min(scaleX, scaleY);
+  deck.style.transform = `scale(${scale})`;
+  deck.style.marginLeft = `${(window.innerWidth - 1920*scale)/2}px`;
+}
+window.addEventListener('resize', scaleDeck);
+scaleDeck();
+showSlide(current);
+</script>
+</body>
+</html>

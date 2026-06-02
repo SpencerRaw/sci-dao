@@ -1,0 +1,40 @@
+# Secrets and environment
+.env
+*.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# SciDAO runtime data (generated locally)
+ledger/
+output/
+
+# Agent internals
+.hermes/
+
+# Temporary
+*.tmp
+*.log
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Thumbnails
+._*
