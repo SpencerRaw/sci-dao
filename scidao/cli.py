@@ -2,7 +2,7 @@
 """
 SciDAO CLI — AI with scientific curiosity that hires humans.
 
-Commands: explore, full, register, submit, leaderboard, lineage
+Commands: explore, full, register, submit, refine, analyze, leaderboard, lineage
 """
 
 import json
@@ -11,6 +11,7 @@ import os
 from scidao.curiosity import generate_hypotheses, explore_domain
 from scidao.decomposer import decompose_hypothesis, estimate_effort
 from scidao.ledger import ContributionLedger
+from scidao.learner import refine_hypothesis, analyze_across_hypotheses
 
 
 SPEED_BANNER = """
@@ -33,11 +34,15 @@ def cmd_explore(domain: str, constraints: str = ""):
         print(f"      Testability: {h.get('testability', '?')}")
         print(f"      {h.get('text', '')[:150]}...")
         print()
+
+    # Store hypotheses in ledger so we can retrieve them later for refinement
+    ledger = ContributionLedger()
+    ledger.store_hypotheses(hypos, domain)
     
     return hypos
 
 
-def cmd_decompose(hypotheses: list[dict], domain: str):
+def cmd_decompose(hypotheses: list, domain: str):
     """Task Decomposer: break hypotheses into atomized tasks."""
     all_tasks = []
     
@@ -57,7 +62,7 @@ def cmd_decompose(hypotheses: list[dict], domain: str):
     return all_tasks
 
 
-def cmd_register(name: str, skills: list[str] = None):
+def cmd_register(name: str, skills: list = None):
     """Register a contributor."""
     ledger = ContributionLedger()
     cid = ledger.register_contributor(name, skills=skills or [])
@@ -66,8 +71,8 @@ def cmd_register(name: str, skills: list[str] = None):
 
 
 def cmd_submit(contributor_id: str, task_id: str, hypothesis_id: str, 
-               result: str):
-    """Submit an experiment result."""
+               result: str, domain: str = ""):
+    """Submit an experiment result — AI learns from it."""
     ledger = ContributionLedger()
     
     if contributor_id not in ledger.contributors:
@@ -75,6 +80,7 @@ def cmd_submit(contributor_id: str, task_id: str, hypothesis_id: str,
         print("   Register first: scidao register <name>")
         return
     
+    # Record the contribution
     entry_id = ledger.record(
         contributor_id=contributor_id,
         task_id=task_id,
@@ -86,6 +92,95 @@ def cmd_submit(contributor_id: str, task_id: str, hypothesis_id: str,
     
     print(f"✅ Contribution recorded: {entry_id}")
     print(f"   Content hash: {entry_id.split('-')[1]}")
+    
+    # ── FEEDBACK LOOP: AI learns from this result ──
+    hypothesis = ledger.get_hypothesis(hypothesis_id)
+    if hypothesis and domain:
+        print(f"\n🧠 AI is learning from your result...\n")
+        previous = ledger.get_hypothesis_lineage(hypothesis_id)
+        previous_results = [e for e in previous if e.get("data_type") == "RAW_DATA"]
+        
+        refined = refine_hypothesis(hypothesis, result, domain, previous_results)
+        
+        verdict_icon = {"SUPPORTS": "✅", "REFUTES": "❌", "INCONCLUSIVE": "❓"}
+        icon = verdict_icon.get(refined.get("verdict", ""), "➡️")
+        
+        print(f"  {icon} Verdict: {refined.get('verdict')}")
+        print(f"  📊 Confidence: {refined.get('confidence', '?')}")
+        print(f"  💡 Learning: {refined.get('learning', '')}")
+        print(f"  🔬 Next step: {refined.get('next_step', '')}")
+        
+        # Save the refined hypothesis back
+        ledger.store_refinement(hypothesis_id, refined)
+        print(f"\n  📝 Refined hypothesis saved as {hypothesis_id}-v{ledger.get_refinement_count(hypothesis_id)}")
+    elif not domain:
+        print("\n  ⓘ  Tip: add --domain to enable AI learning from your result")
+
+
+def cmd_refine(hypothesis_id: str, result: str, domain: str):
+    """Manually refine a hypothesis with new data."""
+    ledger = ContributionLedger()
+    hypothesis = ledger.get_hypothesis(hypothesis_id)
+    
+    if not hypothesis:
+        print(f"❌ Hypothesis not found: {hypothesis_id}")
+        print("   Store hypotheses first: scidao explore <domain>")
+        return
+    
+    print(f"\n🧠 Refining: {hypothesis.get('title', '?')[:80]}...\n")
+    
+    previous = ledger.get_hypothesis_lineage(hypothesis_id)
+    previous_results = [e for e in previous if e.get("data_type") == "RAW_DATA"]
+    
+    refined = refine_hypothesis(hypothesis, result, domain, previous_results)
+    
+    verdict_icon = {"SUPPORTS": "✅", "REFUTES": "❌", "INCONCLUSIVE": "❓"}
+    icon = verdict_icon.get(refined.get("verdict", ""), "➡️")
+    
+    print(f"  {icon} Verdict: {refined.get('verdict')}")
+    print(f"  📊 Confidence: {refined.get('confidence', '?')}")
+    print(f"\n  📝 Refined hypothesis:")
+    print(f"     {refined.get('refined_title', '')}")
+    print(f"\n  💡 Learning: {refined.get('learning', '')}")
+    print(f"  🔬 Next step: {refined.get('next_step', '')}")
+    
+    ledger.store_refinement(hypothesis_id, refined)
+    v = ledger.get_refinement_count(hypothesis_id)
+    print(f"\n  ✅ Saved as {hypothesis_id}-v{v}")
+
+
+def cmd_analyze(domain: str):
+    """Analyze patterns across all refined hypotheses in a domain."""
+    ledger = ContributionLedger()
+    refinements = ledger.get_all_refinements()
+    
+    if len(refinements) < 2:
+        print(f"⚠️  Need at least 2 refined hypotheses (found {len(refinements)}).")
+        print("   Submit results first: scidao submit ...")
+        return
+    
+    print(f"\n🔍 Analyzing {len(refinements)} refinements across domain: {domain}\n")
+    print("   (AI is looking for cross-hypothesis patterns...)\n")
+    
+    analysis = analyze_across_hypotheses(refinements, domain)
+    
+    patterns = analysis.get("patterns", [])
+    if patterns:
+        print("📊 Patterns detected:")
+        for p in patterns:
+            print(f"   • {p}")
+    
+    convergence = analysis.get("convergence", "")
+    if convergence:
+        print(f"\n🎯 Convergence: {convergence}")
+    
+    pivot = analysis.get("pivot_recommendation", "")
+    if pivot:
+        print(f"\n🔄 Pivot recommendation: {pivot}")
+    
+    priority = analysis.get("priority_experiment", "")
+    if priority:
+        print(f"\n⭐ Priority next experiment: {priority}")
 
 
 def cmd_leaderboard():
@@ -102,16 +197,32 @@ def cmd_leaderboard():
 
 
 def cmd_lineage(hypothesis_id: str):
-    """Show all contributions for a hypothesis."""
+    """Show all contributions and refinements for a hypothesis."""
     ledger = ContributionLedger()
     lineage = ledger.get_hypothesis_lineage(hypothesis_id)
     
     print(f"\n📜 Hypothesis Lineage: {hypothesis_id}\n")
+    
+    # Show original hypothesis
+    h = ledger.get_hypothesis(hypothesis_id)
+    if h:
+        print(f"  🧠 Original: {h.get('title', '?')[:100]}")
+        print()
+    
+    # Show refinements
+    refinements = ledger.get_refinements_for(hypothesis_id)
+    for r in refinements:
+        icon = {"SUPPORTS": "✅", "REFUTES": "❌", "INCONCLUSIVE": "❓"}.get(r.get("verdict", ""), "➡️")
+        print(f"  {icon} v{r.get('version', '?')} [{r.get('verdict')}] confidence: {r.get('confidence', '?')}")
+        print(f"     Learning: {r.get('learning', '')[:120]}")
+        print(f"     Next: {r.get('next_step', '')[:120]}")
+        print()
+    
+    # Show contributions
+    print("  📊 Contributions:")
     for e in lineage:
         name = ledger.contributors.get(e["contributor_id"], {}).get("name", "Unknown")
-        print(f"  [{e['timestamp']}] {name}")
-        print(f"      {e['content_preview'][:120]}")
-        print(f"      Weight: {e['weight']}  Hash: {e['content_hash'][:16]}")
+        print(f"     [{e['timestamp']}] {name}: {e['content_preview'][:80]}...")
         print()
 
 
@@ -125,7 +236,7 @@ def cmd_full_run(domain: str, constraints: str = ""):
     """
     print(SPEED_BANNER)
     
-    # Step 1: Curiosity
+    # Step 1: Curiosity (hypotheses auto-stored in ledger)
     hypos = cmd_explore(domain, constraints)
     
     # Step 2: Decompose
@@ -156,11 +267,10 @@ def cmd_full_run(domain: str, constraints: str = ""):
   1. Register:  scidao register "Your Name" --skills "cell culture,MTT"
   2. Claim task: Pick any OPEN task above
   3. Run experiment following the steps
-  4. Submit:     scidao submit <your-id> <task-id> <hypo-id> "your results"
-  5. Get credit: Your contribution is permanently recorded in the ledger
+  4. Submit:     scidao submit <your-id> <task-id> <hypo-id> "your results" --domain "..."
+  5. AI learns:  Your result refines the hypothesis. Confidence updates.
   
-  The AI will learn from your results and generate better hypotheses.
-  Nature is the judge. You are the jury.
+  The AI learns from every result. Nature is the judge. You are the jury.
 """)
     
     # Save to file
@@ -207,18 +317,29 @@ def main():
     p.add_argument("name", help="Your name")
     p.add_argument("--skills", default="", help="Comma-separated skills")
     
-    # submit
-    p = sub.add_parser("submit", help="Submit experiment results")
+    # submit (with learning)
+    p = sub.add_parser("submit", help="Submit experiment results — AI learns from them")
     p.add_argument("contributor_id", help="Your contributor ID")
     p.add_argument("task_id", help="Task ID")
     p.add_argument("hypothesis_id", help="Hypothesis ID")
     p.add_argument("result", help="Your results (text)")
+    p.add_argument("--domain", default="", help="Research domain (enables AI learning)")
+    
+    # refine
+    p = sub.add_parser("refine", help="Manually refine a hypothesis with new data")
+    p.add_argument("hypothesis_id", help="Hypothesis ID to refine")
+    p.add_argument("result", help="Experimental result (text)")
+    p.add_argument("domain", help="Research domain")
+    
+    # analyze
+    p = sub.add_parser("analyze", help="Cross-hypothesis pattern analysis")
+    p.add_argument("domain", help="Research domain")
     
     # leaderboard
     sub.add_parser("leaderboard", help="Contribution leaderboard")
     
-    # lineage
-    p = sub.add_parser("lineage", help="View hypothesis contribution lineage")
+    # lineage (now with refinements)
+    p = sub.add_parser("lineage", help="View hypothesis lineage + refinements")
     p.add_argument("hypothesis_id", help="Hypothesis ID")
     
     args = parser.parse_args()
@@ -231,7 +352,11 @@ def main():
         skills = [s.strip() for s in args.skills.split(",") if s.strip()] if args.skills else None
         cmd_register(args.name, skills)
     elif args.command == "submit":
-        cmd_submit(args.contributor_id, args.task_id, args.hypothesis_id, args.result)
+        cmd_submit(args.contributor_id, args.task_id, args.hypothesis_id, args.result, args.domain)
+    elif args.command == "refine":
+        cmd_refine(args.hypothesis_id, args.result, args.domain)
+    elif args.command == "analyze":
+        cmd_analyze(args.domain)
     elif args.command == "leaderboard":
         cmd_leaderboard()
     elif args.command == "lineage":

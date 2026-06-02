@@ -30,6 +30,8 @@ class ContributionLedger:
     - content_path: path to stored result file
     - parent_entry_id: previous related entry (for provenance chain)
     - weight: contribution weight (0.0-1.0)
+    
+    Also stores hypotheses and their refinement history.
     """
     
     def __init__(self, path: Path = LEDGER_DIR):
@@ -37,9 +39,13 @@ class ContributionLedger:
         self.path.mkdir(parents=True, exist_ok=True)
         self.entries_file = self.path / "entries.jsonl"
         self.contributors_file = self.path / "contributors.json"
+        self.hypotheses_file = self.path / "hypotheses.json"
+        self.refinements_file = self.path / "refinements.jsonl"
         
         self.entries: list[dict] = []
         self.contributors: dict[str, dict] = {}
+        self.hypotheses: dict[str, dict] = {}
+        self.refinements: list[dict] = []
         self._load()
     
     def _load(self):
@@ -49,6 +55,12 @@ class ContributionLedger:
         if self.contributors_file.exists():
             with open(self.contributors_file) as f:
                 self.contributors = json.load(f)
+        if self.hypotheses_file.exists():
+            with open(self.hypotheses_file) as f:
+                self.hypotheses = json.load(f)
+        if self.refinements_file.exists():
+            with open(self.refinements_file) as f:
+                self.refinements = [json.loads(line) for line in f if line.strip()]
     
     def _save(self):
         with open(self.entries_file, "w") as f:
@@ -56,6 +68,11 @@ class ContributionLedger:
                 f.write(json.dumps(e, ensure_ascii=False) + "\n")
         with open(self.contributors_file, "w") as f:
             json.dump(self.contributors, f, indent=2, ensure_ascii=False)
+        with open(self.hypotheses_file, "w") as f:
+            json.dump(self.hypotheses, f, indent=2, ensure_ascii=False)
+        with open(self.refinements_file, "w") as f:
+            for r in self.refinements:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
     
     def register_contributor(self, name: str, skills: list[str] = None,
                             equipment: list[str] = None) -> str:
@@ -160,6 +177,58 @@ class ContributionLedger:
                     current_hash = hashlib.sha256(current_content.encode()).hexdigest()
                     return current_hash == e["content_hash"]
         return False
+
+    # ── Hypothesis storage ────────────────────────────────────
+
+    def store_hypotheses(self, hypotheses: list[dict], domain: str):
+        """Store generated hypotheses for later retrieval and refinement."""
+        for h in hypotheses:
+            hid = h.get("id", "")
+            if hid:
+                self.hypotheses[hid] = {
+                    **h,
+                    "domain": domain,
+                    "stored_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                }
+        self._save()
+
+    def get_hypothesis(self, hypothesis_id: str) -> dict | None:
+        """Retrieve a stored hypothesis by ID."""
+        return self.hypotheses.get(hypothesis_id)
+
+    # ── Refinement tracking ───────────────────────────────────
+
+    def store_refinement(self, hypothesis_id: str, refined: dict):
+        """Record a hypothesis refinement with version tracking."""
+        version = self.get_refinement_count(hypothesis_id) + 1
+        entry = {
+            "hypothesis_id": hypothesis_id,
+            "version": version,
+            "verdict": refined.get("verdict", "?"),
+            "confidence": refined.get("confidence", 0.5),
+            "refined_title": refined.get("refined_title", ""),
+            "refined_text": refined.get("refined_text", ""),
+            "learning": refined.get("learning", ""),
+            "next_step": refined.get("next_step", ""),
+            "refined_at": refined.get("refined_at", time.strftime("%Y-%m-%dT%H:%M:%S")),
+        }
+        self.refinements.append(entry)
+        self._save()
+
+    def get_refinement_count(self, hypothesis_id: str) -> int:
+        """How many times has this hypothesis been refined?"""
+        return sum(1 for r in self.refinements if r["hypothesis_id"] == hypothesis_id)
+
+    def get_refinements_for(self, hypothesis_id: str) -> list[dict]:
+        """Get all refinements for a hypothesis, ordered by version."""
+        return sorted(
+            [r for r in self.refinements if r["hypothesis_id"] == hypothesis_id],
+            key=lambda r: r["version"],
+        )
+
+    def get_all_refinements(self) -> list[dict]:
+        """Get all refinements across all hypotheses."""
+        return list(self.refinements)
 
 
 if __name__ == "__main__":
