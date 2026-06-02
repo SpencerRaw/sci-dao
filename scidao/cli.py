@@ -58,6 +58,10 @@ def cmd_decompose(hypotheses: list, domain: str):
         for t in tasks:
             print(f"        [{t['id']}] {t.get('difficulty', '?')}: {t.get('title', '?')}")
         print()
+
+    # Store tasks in ledger for lifecycle tracking
+    ledger = ContributionLedger()
+    ledger.store_tasks(all_tasks)
     
     return all_tasks
 
@@ -341,6 +345,20 @@ def main():
     # lineage (now with refinements)
     p = sub.add_parser("lineage", help="View hypothesis lineage + refinements")
     p.add_argument("hypothesis_id", help="Hypothesis ID")
+
+    # serve
+    p = sub.add_parser("serve", help="Start SciDAO REST API server")
+    p.add_argument("--host", default="0.0.0.0", help="Host to bind")
+    p.add_argument("--port", type=int, default=8000, help="Port to bind")
+
+    # claim
+    p = sub.add_parser("claim", help="Claim an OPEN task (48h lock)")
+    p.add_argument("task_id", help="Task ID")
+    p.add_argument("contributor_id", help="Your contributor ID")
+
+    # verify
+    p = sub.add_parser("verify", help="Verify a submitted task")
+    p.add_argument("task_id", help="Task ID")
     
     args = parser.parse_args()
     
@@ -361,6 +379,25 @@ def main():
         cmd_leaderboard()
     elif args.command == "lineage":
         cmd_lineage(args.hypothesis_id)
+    elif args.command == "serve":
+        from scidao.server import serve
+        serve(args.host, args.port)
+    elif args.command == "claim":
+        ledger = ContributionLedger()
+        try:
+            result = ledger.claim_task(args.task_id, args.contributor_id)
+            print(f"✅ Claimed: {args.task_id}")
+            print(f"   Assignee: {result['assignee']}")
+            print(f"   Expires: {result['expires']} (48h)")
+        except ValueError as e:
+            print(f"❌ {e}")
+    elif args.command == "verify":
+        ledger = ContributionLedger()
+        try:
+            result = ledger.verify_task(args.task_id)
+            print(f"✅ Verified: {args.task_id}")
+        except ValueError as e:
+            print(f"❌ {e}")
     else:
         parser.print_help()
 

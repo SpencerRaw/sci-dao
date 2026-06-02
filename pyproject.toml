@@ -26,6 +26,8 @@ classifiers = [
 ]
 dependencies = [
     "openai>=1.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +38,7 @@ dev = [
 
 [project.scripts]
 scidao = "scidao.cli:main"
+scidao-serve = "scidao.server:serve"
 
 [project.urls]
 Homepage = "https://github.com/SpencerRaw/sci-dao"

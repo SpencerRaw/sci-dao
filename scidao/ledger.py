@@ -89,12 +89,29 @@ class ContributionLedger:
                 FOREIGN KEY (hypothesis_id) REFERENCES hypotheses(id)
             );
 
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                hypothesis_id TEXT NOT NULL,
+                status TEXT DEFAULT 'OPEN',
+                assignee TEXT,
+                claimed_at TEXT,
+                submitted_at TEXT,
+                verified_at TEXT,
+                claim_expiry TEXT,
+                FOREIGN KEY (hypothesis_id) REFERENCES hypotheses(id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_entries_hypothesis 
                 ON entries(hypothesis_id);
             CREATE INDEX IF NOT EXISTS idx_entries_contributor 
                 ON entries(contributor_id);
             CREATE INDEX IF NOT EXISTS idx_refinements_hypothesis 
                 ON refinements(hypothesis_id);
+            CREATE INDEX IF NOT EXISTS idx_tasks_hypothesis 
+                ON tasks(hypothesis_id);
+            CREATE INDEX IF NOT EXISTS idx_tasks_status 
+                ON tasks(status);
         """)
         self._conn.commit()
 
@@ -335,6 +352,97 @@ class ContributionLedger:
             "SELECT * FROM refinements ORDER BY refined_at DESC"
         ).fetchall()
         return [dict(r) for r in rows]
+
+    # ── Task lifecycle ─────────────────────────────────────────
+
+    def store_tasks(self, tasks: list[dict]):
+        """Store tasks from the decomposer into the ledger."""
+        now = time.strftime("%Y-%m-%dT%H:%M:%S")
+        for t in tasks:
+            self._conn.execute(
+                """INSERT OR REPLACE INTO tasks
+                   (id, title, hypothesis_id, status)
+                   VALUES (?, ?, ?, ?)""",
+                (t.get("id", ""), t.get("title", ""),
+                 t.get("parent_hypothesis", ""), t.get("status", "OPEN")),
+            )
+        self._conn.commit()
+
+    def claim_task(self, task_id: str, contributor_id: str) -> dict:
+        """Claim an OPEN task. Sets CLAIMED with 48h expiry."""
+        row = self._conn.execute(
+            "SELECT * FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        if not row:
+            raise ValueError(f"Task not found: {task_id}")
+        if row["status"] != "OPEN":
+            raise ValueError(f"Task is {row['status']}, not OPEN")
+        if row["claim_expiry"] and row["claim_expiry"] > time.strftime("%Y-%m-%dT%H:%M:%S"):
+            raise ValueError(f"Task claimed until {row['claim_expiry']}")
+
+        now = time.strftime("%Y-%m-%dT%H:%M:%S")
+        # 48h from now
+        from datetime import datetime, timedelta
+        expiry = (datetime.utcnow() + timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%S")
+
+        self._conn.execute(
+            """UPDATE tasks SET status='CLAIMED', assignee=?, 
+               claimed_at=?, claim_expiry=? WHERE id=?""",
+            (contributor_id, now, expiry, task_id),
+        )
+        self._conn.commit()
+        return {"task_id": task_id, "status": "CLAIMED", "assignee": contributor_id,
+                "expires": expiry}
+
+    def submit_task_result(self, task_id: str, content: str) -> dict:
+        """Mark a claimed task as submitted."""
+        row = self._conn.execute(
+            "SELECT * FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        if not row:
+            raise ValueError(f"Task not found: {task_id}")
+        if row["status"] != "CLAIMED":
+            raise ValueError(f"Task is {row['status']}, not CLAIMED")
+
+        now = time.strftime("%Y-%m-%dT%H:%M:%S")
+        self._conn.execute(
+            "UPDATE tasks SET status='SUBMITTED', submitted_at=? WHERE id=?",
+            (now, task_id),
+        )
+        self._conn.commit()
+        return {"task_id": task_id, "status": "SUBMITTED"}
+
+    def verify_task(self, task_id: str) -> dict:
+        """Verify a submitted task."""
+        row = self._conn.execute(
+            "SELECT * FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        if not row:
+            raise ValueError(f"Task not found: {task_id}")
+        if row["status"] != "SUBMITTED":
+            raise ValueError(f"Task is {row['status']}, not SUBMITTED")
+
+        now = time.strftime("%Y-%m-%dT%H:%M:%S")
+        self._conn.execute(
+            "UPDATE tasks SET status='VERIFIED', verified_at=? WHERE id=?",
+            (now, task_id),
+        )
+        self._conn.commit()
+        return {"task_id": task_id, "status": "VERIFIED"}
+
+    def get_claimable_tasks(self) -> list[dict]:
+        """Get all OPEN tasks (not yet claimed)."""
+        rows = self._conn.execute(
+            "SELECT * FROM tasks WHERE status='OPEN' ORDER BY id"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_task(self, task_id: str) -> dict | None:
+        """Get a task by ID."""
+        row = self._conn.execute(
+            "SELECT * FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
+        return dict(row) if row else None
 
     # ── Cleanup ────────────────────────────────────────────────
 
