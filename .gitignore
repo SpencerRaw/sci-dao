@@ -23,6 +23,7 @@ venv/
 # SciDAO runtime data (generated locally)
 ledger_data/
 output/
+*.db
 
 # Agent internals
 .hermes/
