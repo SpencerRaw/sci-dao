@@ -157,3 +157,14 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 > "Nature is the judge. You are the jury. The AI is the prosecutor."
+
+## Contributing
+
+Issues and PRs welcome. Before submitting:
+
+```bash
+pip install -e "."
+pytest
+```
+
+See [PLAN.md](PLAN.md) for roadmap and design decisions.
